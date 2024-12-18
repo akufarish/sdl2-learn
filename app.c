@@ -13,7 +13,7 @@ struct Game
 };
 
 bool sdl_initialize(struct Game *game);
-void game_cleanup(struct Game *game);
+void game_cleanup(struct Game *game, int exit_status);
 
 int main(int argc, char** argv) {
     struct Game game = {
@@ -22,14 +22,13 @@ int main(int argc, char** argv) {
     };
     
     if (sdl_initialize(&game)) {
-        game_cleanup(&game);
+        game_cleanup(&game, EXIT_FAILURE);
         printf("Masalah");
         exit(1);
     }
 
-    bool running = true;
 
-    while (running)
+    while (true)
     {
         SDL_Event event;
         while (SDL_PollEvent(&event))
@@ -37,32 +36,46 @@ int main(int argc, char** argv) {
             switch (event.type)
             {
             case SDL_QUIT:
-                running = false;
+                game_cleanup(&game, EXIT_SUCCESS);
                 break;
-            
+            case SDL_KEYDOWN:
+                switch(event.key.keysym.scancode) {
+                    case SDL_SCANCODE_W:
+                        printf("W pressed!\n");
+                        break;
+                    case SDL_SCANCODE_A:
+                        printf("A pressed!\n");
+                        break;
+                    case SDL_SCANCODE_S:
+                        printf("S pressed!\n");
+                        break;
+                    case SDL_SCANCODE_D:
+                        printf("D pressed!\n");
+                        break;
+                    default:
+                        break;
+                }
+
             default:
                 break;
             }
         }
         
+        SDL_RenderClear(game.renderer);
+        SDL_RenderPresent(game.renderer);
     }
     
 
 
-    printf("Hello World!");
-    SDL_RenderClear(game.renderer);
-    SDL_RenderPresent(game.renderer);
-
-
-    game_cleanup(&game);
+    game_cleanup(&game, EXIT_SUCCESS);
     return 0;
 }
 
-void game_cleanup(struct Game *game) {
+void game_cleanup(struct Game *game, int exit_status) {
     SDL_DestroyRenderer(game->renderer);
     SDL_DestroyWindow(game->window);
     SDL_Quit();
-    exit(0);
+    exit(exit_status);
 }
 
 bool sdl_initialize(struct Game *game) {
@@ -73,7 +86,7 @@ bool sdl_initialize(struct Game *game) {
 
     game->window =  SDL_CreateWindow(
         WINDOW_TITLE, SDL_WINDOWPOS_CENTERED, 
-        SDL_WINDOWPOS_CENTERED, WINDOW_WIDTH, WINDOW_HEIGHT, 0);
+        SDL_WINDOWPOS_CENTERED, WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_RESIZABLE);
 
     if (!game->window) {
         fprintf(stderr, "Error create window SDL: '%s'\n", SDL_GetError());
