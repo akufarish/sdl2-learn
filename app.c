@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <math.h>
+#include <SDL2/SDL_image.h>
 
 #define COLS 20
 #define ROWS 20
@@ -9,7 +10,7 @@
 #define WINDOW_WIDTH  800
 #define WINDOW_HEIGHT 600
 #define BLOCK_SIZE 25;
-
+#define PESAWAT_PATH "res/img/pesawat.png"
 
 struct Game
 {
@@ -27,21 +28,11 @@ struct Karakter
     int velocity_y;
 };
 
-struct Food
-{
-    int x;
-    int y;
-    SDL_Rect rect;
-};
-
-
 
 bool sdl_initialize(struct Game *game);
 void karakter_initialize(struct Karakter *karakter, SDL_Renderer *renderer);
-void food_initialize(struct Food *food, SDL_Renderer *renderer);
+void generateAmmo(struct Karakter *karakter, struct Karakter *peluru, SDL_Renderer *renderer);
 void game_cleanup(struct Game *game, int exit_status);
-void is_eat(struct Karakter *karakter, struct Food *food, SDL_Renderer *renderer);
-void gameOver(struct Karakter *karakter, struct Game *game);
 
 int main(int argc, char** argv) {
     struct Game game = {
@@ -50,20 +41,22 @@ int main(int argc, char** argv) {
     };
 
     struct Karakter karakter = {
-        .h = 50,
-        .w = 50,
+        .h = 10,
+        .w = 10,
         .x = 50,
         .y = 50,
         .velocity_x = 0,
         .velocity_y = 0
     };
 
-    struct Food food = {
-        .x = 25 * 10,
-        .y = 25 * 10,
-        .rect = NULL
+    struct Karakter peluru = {
+        .h = 100,
+        .w = 10,
+        .x = 50,
+        .y = 50,
+        .velocity_x = 0,
+        .velocity_y = 0
     };
-    
     
     if (sdl_initialize(&game)) {
         game_cleanup(&game, EXIT_FAILURE);
@@ -72,58 +65,67 @@ int main(int argc, char** argv) {
     }
 
 
-    while (true)
-    {
-        SDL_Delay(200);
-        karakter.x += karakter.velocity_x * BLOCK_SIZE;
-        karakter.y += karakter.velocity_y * BLOCK_SIZE;
+        bool isAmmoActive = false; 
 
-        SDL_Event event;
-        while (SDL_PollEvent(&event))
-        {
-            switch (event.type)
-            {
+while (true) {
+    SDL_Delay(200);
+    peluru.y += peluru.velocity_y * BLOCK_SIZE;
+
+    SDL_Event event;
+    while (SDL_PollEvent(&event)) {
+        switch (event.type) {
             case SDL_QUIT:
                 game_cleanup(&game, EXIT_SUCCESS);
                 break;
             case SDL_KEYDOWN:
-                switch(event.key.keysym.scancode) {
-                    case SDL_SCANCODE_W:
-                        printf("W pressed!\n");
-                        karakter.velocity_x = 0;
-                        karakter.velocity_y = -1;
-                        break;
-                    case SDL_SCANCODE_A:
-                        printf("A pressed!\n");
-                        karakter.velocity_x = -1;
-                        karakter.velocity_y = 0;
-                        break;
-                    case SDL_SCANCODE_S:
-                        printf("S pressed!\n");
-                        karakter.velocity_x = 0;
-                        karakter.velocity_y = 1;
-                        break;
-                    case SDL_SCANCODE_D:
-                        printf("D pressed!\n");
-                        karakter.velocity_x = 1;
-                        karakter.velocity_y = 0;
+                switch (event.key.keysym.scancode) {
+                    case SDL_SCANCODE_ESCAPE:
+                        game_cleanup(&game, EXIT_SUCCESS);
                         break;
                     default:
                         break;
                 }
-
+                break;
+            case SDL_MOUSEMOTION:
+                int x, y;
+                SDL_GetMouseState(&x, &y);
+                karakter.x = x;
+                karakter.y = y;
+                break;
+            case SDL_MOUSEBUTTONDOWN:
+                switch (event.button.button) {
+                    case SDL_BUTTON_LEFT:
+                        printf("Klik kiri\n");
+                        isAmmoActive = true; 
+                        peluru.x = karakter.x + karakter.w / 2 - peluru.w / 2; 
+                        peluru.y = karakter.y - peluru.h; 
+                        peluru.velocity_x = 0;
+                        peluru.velocity_y = -1;
+                        break;
+                    default:
+                        break;
+                }
+                break;
             default:
                 break;
-            }
         }
-        SDL_SetRenderDrawColor(game.renderer, 255, 255, 255, 255);
-        SDL_RenderClear(game.renderer);
-        karakter_initialize(&karakter, game.renderer);
-        food_initialize(&food, game.renderer);
-        is_eat(&karakter, &food, game.renderer);
-        gameOver(&karakter, &game);
-        SDL_RenderPresent(game.renderer);
     }
+
+    // Clear screen
+    SDL_SetRenderDrawColor(game.renderer, 255, 255, 255, 255);
+    SDL_RenderClear(game.renderer);
+
+    karakter_initialize(&karakter, game.renderer);
+
+    if (isAmmoActive) {
+        generateAmmo(&karakter, &peluru, game.renderer);
+    }
+
+    gameOver(&karakter, &game);
+
+    SDL_RenderPresent(game.renderer);
+}
+
     
 
 
@@ -131,12 +133,6 @@ int main(int argc, char** argv) {
     return 0;
 }
 
-void is_eat(struct Karakter *karakter, struct Food *food, SDL_Renderer *renderer) {
-    if (karakter->x == food->x &&  karakter->y == food->y) {
-        printf("Mati");
-        SDL_RenderClear(renderer);
-    }
-}
 
 void gameOver(struct Karakter *karakter, struct Game *game) {
     if (karakter->x < 0 || karakter->x >= WINDOW_WIDTH || karakter->y < 0 || karakter->y >= WINDOW_HEIGHT) {
@@ -148,32 +144,29 @@ void gameOver(struct Karakter *karakter, struct Game *game) {
 void karakter_initialize(struct Karakter *karakter, SDL_Renderer *renderer) {
 
     SDL_Rect rect;
+    SDL_Texture *img = IMG_LoadTexture(renderer, PESAWAT_PATH);
+    SDL_QueryTexture(img, NULL, NULL, &karakter->w, &karakter->h);
+
     rect.h = karakter->h;
     rect.w = karakter->w;
     rect.x = karakter->x;
     rect.y = karakter->y;
 
+    SDL_RenderCopy(renderer, img, NULL, &rect);
+}
+
+
+void generateAmmo(struct Karakter *karakter, struct Karakter *peluru, SDL_Renderer *renderer) {
+     SDL_Rect rect;
+    rect.h = peluru->h;
+    rect.w = peluru->w;
+    rect.x = peluru->x;
+    rect.y = peluru->y;
+
     SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
     SDL_RenderFillRect(renderer, &rect);
 }
 
-void food_initialize(struct Food *food, SDL_Renderer *renderer) {
-
-    // food->x = (rand() % (WINDOW_WIDTH / 5)) * 5;
-    // food->y = (rand() % (WINDOW_HEIGHT / 5)) * 5;
-
-
-    SDL_Rect rect;
-    rect.h = 50;
-    rect.w = 50;
-    rect.x = food->x;
-    rect.y = food->y;
-
-    food->rect = rect;
-
-    SDL_SetRenderDrawColor(renderer, 0, 128, 0, 0);
-    SDL_RenderFillRect(renderer, &rect);
-}
 
 void game_cleanup(struct Game *game, int exit_status) {
     SDL_DestroyRenderer(game->renderer);
