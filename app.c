@@ -29,12 +29,9 @@ struct Karakter
     int velocity_y;
 };
 
-
-
-
 bool sdl_initialize(struct Game *game);
-void karakter_initialize(struct Karakter *karakter, SDL_Renderer *renderer);
-void generateAmmo(struct Karakter *karakter, struct Karakter *peluru, SDL_Renderer *renderer);
+void karakter_initialize(struct Karakter *karakter, struct Game *game);
+void generateAmmo(struct Karakter *karakter, struct Karakter *peluru, struct Game *game);
 void game_cleanup(struct Game *game, int exit_status);
 
 int main(int argc, char** argv) {
@@ -68,63 +65,53 @@ int main(int argc, char** argv) {
         exit(1);
     }
 
-
-        bool isAmmoActive = false; 
-
-while (true) {
-    SDL_ShowCursor(SDL_DISABLE);
-    SDL_Event event;
-    while (SDL_PollEvent(&event)) {
-        switch (event.type) {
-            case SDL_QUIT:
-                game_cleanup(&game, EXIT_SUCCESS);
-                break;
-            case SDL_KEYDOWN:
-                switch (event.key.keysym.scancode) {
-                    case SDL_SCANCODE_ESCAPE:
-                        game_cleanup(&game, EXIT_SUCCESS);
-                        break;
-                    default:
-                        break;
-                }
-                break;
-            case SDL_MOUSEMOTION:
-                int x, y;
-                SDL_GetMouseState(&x, &y);
-                karakter.x = x - karakter.w / 5;
-                karakter.y = y - karakter.h / 5;
-                break;
-            case SDL_MOUSEBUTTONDOWN:
-                switch (event.button.button) {
-                    case SDL_BUTTON_LEFT:
-                        printf("Klik kiri\n");
-                        break;
-                    default:
-                        break;
-                }
-                break;
-            default:
-                break;
+    while (true) {
+        SDL_ShowCursor(SDL_DISABLE);
+        SDL_Event event;
+        while (SDL_PollEvent(&event)) {
+            switch (event.type) {
+                case SDL_QUIT:
+                    game_cleanup(&game, EXIT_SUCCESS);
+                    break;
+                case SDL_KEYDOWN:
+                    switch (event.key.keysym.scancode) {
+                        case SDL_SCANCODE_ESCAPE:
+                            game_cleanup(&game, EXIT_SUCCESS);
+                            break;
+                        default:
+                            break;
+                    }
+                    break;
+                case SDL_MOUSEMOTION:
+                    int x, y;
+                    SDL_GetMouseState(&x, &y);
+                    karakter.x = x - karakter.w / 5;
+                    karakter.y = y - karakter.h / 5;
+                    break;
+                case SDL_MOUSEBUTTONDOWN:
+                    switch (event.button.button) {
+                        case SDL_BUTTON_LEFT:
+                            printf("Klik kiri\n");
+                            break;
+                        default:
+                            break;
+                    }
+                    break;
+                default:
+                    break;
+            }
         }
-    }
 
-    // Clear screen
     SDL_Texture *bg = IMG_LoadTexture(game.renderer, BACKGROUND_IMG);
-    // SDL_SetRenderDrawColor(game.renderer, 255, 255, 255, 255);
     SDL_RenderClear(game.renderer);
     SDL_RenderCopy(game.renderer, bg, NULL, NULL);
 
-    karakter_initialize(&karakter, game.renderer);
-
-   
+    karakter_initialize(&karakter, &game);
 
     gameOver(&karakter, &game);
 
     SDL_RenderPresent(game.renderer);
 }
-
-    
-
 
     game_cleanup(&game, EXIT_SUCCESS);
     return 0;
@@ -143,14 +130,12 @@ void gameOver(struct Karakter *karakter, struct Game *game) {
     } else if (karakter->y > WINDOW_HEIGHT - 100) { 
         karakter->y = WINDOW_HEIGHT - 100; 
     }
-
 }
 
 
-void karakter_initialize(struct Karakter *karakter, SDL_Renderer *renderer) {
-
+void karakter_initialize(struct Karakter *karakter, struct Game *game) {
     SDL_Rect rect;
-    SDL_Texture *img = IMG_LoadTexture(renderer, PESAWAT_PATH);
+    SDL_Texture *img = IMG_LoadTexture(game->renderer, PESAWAT_PATH);
     SDL_QueryTexture(img, NULL, NULL, &karakter->w, &karakter->h);
 
     rect.h = karakter->h - 100;
@@ -158,19 +143,19 @@ void karakter_initialize(struct Karakter *karakter, SDL_Renderer *renderer) {
     rect.x = karakter->x;
     rect.y = karakter->y;
 
-    SDL_RenderCopy(renderer, img, NULL, &rect);
+    SDL_RenderCopy(game->renderer, img, NULL, &rect);
 }
 
 
-void generateAmmo(struct Karakter *karakter, struct Karakter *peluru, SDL_Renderer *renderer) {
-     SDL_Rect rect;
+void generateAmmo(struct Karakter *karakter, struct Karakter *peluru, struct Game *game) {
+    SDL_Rect rect;
     rect.h = peluru->h;
     rect.w = peluru->w;
     rect.x = peluru->x;
     rect.y = peluru->y;
 
-    SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
-    SDL_RenderFillRect(renderer, &rect);
+    SDL_SetRenderDrawColor(game->renderer, 255, 0, 0, 255);
+    SDL_RenderFillRect(game->renderer, &rect);
 }
 
 
