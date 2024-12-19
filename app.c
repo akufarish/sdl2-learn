@@ -9,7 +9,6 @@
 #define WINDOW_TITLE "Space Rocket"
 #define WINDOW_WIDTH  600
 #define WINDOW_HEIGHT 800
-#define BLOCK_SIZE 25;
 #define PESAWAT_PATH "res/img/pesawat.png"
 #define BACKGROUND_IMG "res/img/bg.png"
 
@@ -33,7 +32,8 @@ bool sdl_initialize(struct Game *game);
 void karakter_initialize(struct Karakter *karakter, struct Game *game);
 void generateAmmo(struct Karakter *karakter, struct Karakter *peluru, struct Game *game);
 void game_cleanup(struct Game *game, int exit_status);
-void gameOver(struct Karakter *karakter, struct Game *game);
+void game_over(struct Karakter *karakter, struct Game *game);
+void icon_initialize(struct Game *game);
 
 int main(int argc, char** argv) {
 
@@ -66,6 +66,8 @@ int main(int argc, char** argv) {
         exit(1);
     }
 
+    icon_initialize(&game);
+
     while (true) {
         SDL_ShowCursor(SDL_DISABLE);
         SDL_Event event;
@@ -89,15 +91,6 @@ int main(int argc, char** argv) {
                     karakter.x = x - karakter.w / 5;
                     karakter.y = y - karakter.h / 5;
                     break;
-                case SDL_MOUSEBUTTONDOWN:
-                    switch (event.button.button) {
-                        case SDL_BUTTON_LEFT:
-                            printf("Klik kiri\n");
-                            break;
-                        default:
-                            break;
-                    }
-                    break;
                 default:
                     break;
             }
@@ -109,8 +102,8 @@ int main(int argc, char** argv) {
 
     karakter_initialize(&karakter, &game);
 
-    gameOver(&karakter, &game);
-
+    game_over(&karakter, &game);
+    SDL_DestroyTexture(bg);
     SDL_RenderPresent(game.renderer);
 }
     game_cleanup(&game, EXIT_SUCCESS);
@@ -118,7 +111,7 @@ int main(int argc, char** argv) {
 }
 
 
-void gameOver(struct Karakter *karakter, struct Game *game) {
+void game_over(struct Karakter *karakter, struct Game *game) {
   if (karakter->x < 0) {
         karakter->x = 0; 
     } else if (karakter->x > WINDOW_WIDTH - 100) { 
@@ -189,4 +182,9 @@ bool sdl_initialize(struct Game *game) {
     }
 
     return false;
+}
+
+void icon_initialize(struct Game *game) {
+    SDL_Surface *icon = IMG_Load(PESAWAT_PATH);
+    SDL_SetWindowIcon(game->window, icon);
 }
