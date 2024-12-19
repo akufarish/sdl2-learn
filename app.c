@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <math.h>
 #include <SDL2/SDL_image.h>
+#include <SDL2/SDL_mixer.h>
 
 #define COLS 20
 #define ROWS 20
@@ -11,6 +12,7 @@
 #define WINDOW_HEIGHT 800
 #define PESAWAT_PATH "res/img/pesawat.png"
 #define BACKGROUND_IMG "res/img/bg.png"
+#define AMMO_SOUND_EFFECT_PATH "res/audio/blaster.wav"
 
 struct Game
 {
@@ -18,7 +20,7 @@ struct Game
     SDL_Renderer *renderer;
 };
 
-struct Karakter
+typedef struct Karakter
 {
     int x;
     int y;
@@ -26,14 +28,21 @@ struct Karakter
     int h;
     int velocity_x;
     int velocity_y;
-};
+} Karakter;
+
+bool isAmmoActive = false;
+int ammoLifeTime = 5000;
+Uint32 ammoSpawnTime = 0;
+Mix_Chunk *ammo_sound_effect = NULL;
 
 bool sdl_initialize(struct Game *game);
 void karakter_initialize(struct Karakter *karakter, struct Game *game);
-void generateAmmo(struct Karakter *karakter, struct Karakter *peluru, struct Game *game);
+void generate_ammo(struct Karakter *karakter, struct Karakter *peluru, struct Game *game);
 void game_cleanup(struct Game *game, int exit_status);
 void game_over(struct Karakter *karakter, struct Game *game);
 void icon_initialize(struct Game *game);
+void load_sound_effect();
+
 
 int main(int argc, char** argv) {
 
@@ -42,16 +51,16 @@ int main(int argc, char** argv) {
         .renderer = NULL
     };
 
-    struct Karakter karakter = {
+    Karakter karakter = {
         .h = 100,
         .w = 100,
         .x = 10,
         .y = 10,
         .velocity_x = 0,
         .velocity_y = 0
-    };
+    } ;
 
-    struct Karakter peluru = {
+    Karakter peluru = {
         .h = 100,
         .w = 10,
         .x = 50,
@@ -65,6 +74,7 @@ int main(int argc, char** argv) {
         printf("Masalah");
         exit(1);
     }
+    load_sound_effect();
 
     icon_initialize(&game);
 
@@ -91,6 +101,19 @@ int main(int argc, char** argv) {
                     karakter.x = x - karakter.w / 5;
                     karakter.y = y - karakter.h / 5;
                     break;
+                case SDL_MOUSEBUTTONDOWN:
+                    switch (event.button.button) {
+                        case SDL_BUTTON_LEFT:
+                            printf("Klik kiri\n");
+                            isAmmoActive = true; 
+                            ammoSpawnTime = SDL_GetTicks(); 
+                            peluru.x = karakter.x + karakter.w / 4 - peluru.w / 5;
+                            peluru.y = karakter.y - peluru.h; 
+                            Mix_PlayChannel(-1, ammo_sound_effect, 0);
+                        default:
+                            break;
+                    }
+                    break;
                 default:
                     break;
             }
@@ -102,8 +125,17 @@ int main(int argc, char** argv) {
 
     karakter_initialize(&karakter, &game);
 
+     if (isAmmoActive && (SDL_GetTicks() - ammoSpawnTime > ammoLifeTime)) {
+        isAmmoActive = false;
+    }
+
+    if (isAmmoActive) {
+        generate_ammo(&karakter, &peluru, &game);
+    }
+
     game_over(&karakter, &game);
     SDL_DestroyTexture(bg);
+
     SDL_RenderPresent(game.renderer);
 }
     game_cleanup(&game, EXIT_SUCCESS);
@@ -140,7 +172,7 @@ void karakter_initialize(struct Karakter *karakter, struct Game *game) {
 }
 
 
-void generateAmmo(struct Karakter *karakter, struct Karakter *peluru, struct Game *game) {
+void generate_ammo(struct Karakter *karakter, struct Karakter *peluru, struct Game *game) {
     SDL_Rect rect;
     rect.h = peluru->h;
     rect.w = peluru->w;
@@ -149,12 +181,15 @@ void generateAmmo(struct Karakter *karakter, struct Karakter *peluru, struct Gam
 
     SDL_SetRenderDrawColor(game->renderer, 255, 0, 0, 255);
     SDL_RenderFillRect(game->renderer, &rect);
+
+    peluru->y -= 20;
 }
 
 
 void game_cleanup(struct Game *game, int exit_status) {
     SDL_DestroyRenderer(game->renderer);
     SDL_DestroyWindow(game->window);
+    Mix_FreeChunk(ammo_sound_effect);
     SDL_Quit();
     exit(exit_status);
 }
@@ -180,6 +215,11 @@ bool sdl_initialize(struct Game *game) {
         fprintf(stderr, "Error create window SDL: '%s'\n", SDL_GetError());
         return true;
     }
+    
+    if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048)) {
+        printf( "SDL_mixer could not initialize! SDL_mixer Error: %s\n", Mix_GetError() );
+        return true;
+    }
 
     return false;
 }
@@ -187,4 +227,12 @@ bool sdl_initialize(struct Game *game) {
 void icon_initialize(struct Game *game) {
     SDL_Surface *icon = IMG_Load(PESAWAT_PATH);
     SDL_SetWindowIcon(game->window, icon);
+}
+
+void load_sound_effect() {
+    ammo_sound_effect = Mix_LoadWAV(AMMO_SOUND_EFFECT_PATH);
+
+    if (ammo_sound_effect == NULL) {
+        printf("Failed to load sound effect %s", Mix_GetError());
+    }
 }
