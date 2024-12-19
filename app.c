@@ -14,11 +14,11 @@
 #define BACKGROUND_IMG "res/img/bg.png"
 #define AMMO_SOUND_EFFECT_PATH "res/audio/blaster.wav"
 
-struct Game
+typedef struct Game
 {
     SDL_Window *window;
     SDL_Renderer *renderer;
-};
+} Game;
 
 typedef struct Karakter
 {
@@ -35,13 +35,14 @@ int ammoLifeTime = 5000;
 Uint32 ammoSpawnTime = 0;
 Mix_Chunk *ammo_sound_effect = NULL;
 
-bool sdl_initialize(struct Game *game);
-void karakter_initialize(struct Karakter *karakter, struct Game *game);
-void generate_ammo(struct Karakter *karakter, struct Karakter *peluru, struct Game *game);
-void game_cleanup(struct Game *game, int exit_status);
-void game_over(struct Karakter *karakter, struct Game *game);
-void icon_initialize(struct Game *game);
+bool sdl_initialize(Game *game);
+void karakter_initialize(Karakter *karakter, Game *game);
+void generate_ammo(Karakter *karakter, Karakter *peluru, Game *game);
+void game_cleanup(Game *game, int exit_status);
+void game_over(Karakter *karakter, Game *game);
+void icon_initialize( Game *game);
 void load_sound_effect();
+void enemy_spawn(Karakter *musuh, Game *game);
 
 
 int main(int argc, char** argv) {
@@ -55,6 +56,15 @@ int main(int argc, char** argv) {
         .h = 100,
         .w = 100,
         .x = 10,
+        .y = 10,
+        .velocity_x = 0,
+        .velocity_y = 0
+    } ;
+
+    Karakter musuh = {
+        .h = 100,
+        .w = 100,
+        .x = 250,
         .y = 10,
         .velocity_x = 0,
         .velocity_y = 0
@@ -133,10 +143,13 @@ int main(int argc, char** argv) {
         generate_ammo(&karakter, &peluru, &game);
     }
 
+    enemy_spawn(&musuh, &game);
     game_over(&karakter, &game);
     SDL_DestroyTexture(bg);
 
     SDL_RenderPresent(game.renderer);
+
+    SDL_Delay(16);
 }
     game_cleanup(&game, EXIT_SUCCESS);
     return 0;
@@ -167,8 +180,26 @@ void karakter_initialize(struct Karakter *karakter, struct Game *game) {
     rect.w = karakter->w - 100;
     rect.x = karakter->x;
     rect.y = karakter->y;
-
     SDL_RenderCopy(game->renderer, img, NULL, &rect);
+}
+
+void enemy_spawn(Karakter *musuh, Game *game) {
+    SDL_Rect rect;
+    SDL_Texture *img = IMG_LoadTexture(game->renderer, PESAWAT_PATH);
+    SDL_QueryTexture(img, NULL, NULL, &musuh->w, &musuh->h);
+
+    rect.h = musuh->h - 100;
+    rect.w = musuh->w - 100;
+    rect.x = musuh->x;
+    rect.y = musuh->y;
+    double angle = 0.0;
+    SDL_RenderCopyEx(game->renderer, img, NULL, &rect, angle, NULL, SDL_FLIP_VERTICAL);
+
+    musuh->y += 5;
+
+    if (musuh->y >= 800) {
+        musuh->y = 0;
+    }
 }
 
 
