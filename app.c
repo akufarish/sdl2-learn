@@ -32,12 +32,13 @@ typedef struct Karakter
 
 bool isAmmoActive = false;
 int ammoLifeTime = 5000;
+Uint16 score = 0;
 Uint32 ammoSpawnTime = 0;
 Mix_Chunk *ammo_sound_effect = NULL;
 
 bool sdl_initialize(Game *game);
 void karakter_initialize(Karakter *karakter, Game *game);
-void generate_ammo(Karakter *karakter, Karakter *peluru, Game *game);
+void generate_ammo(Karakter *karakter, Karakter *peluru, Game *game, Karakter *musuh);
 void game_cleanup(Game *game, int exit_status);
 void game_over(Karakter *karakter, Game *game);
 void icon_initialize( Game *game);
@@ -62,8 +63,8 @@ int main(int argc, char** argv) {
     } ;
 
     Karakter musuh = {
-        .h = 100,
-        .w = 100,
+        .h = 0,
+        .w = 0,
         .x = 250,
         .y = 10,
         .velocity_x = 0,
@@ -140,13 +141,14 @@ int main(int argc, char** argv) {
     }
 
     if (isAmmoActive) {
-        generate_ammo(&karakter, &peluru, &game);
+        generate_ammo(&karakter, &peluru, &game, &musuh);
     }
 
     enemy_spawn(&musuh, &game);
     game_over(&karakter, &game);
     SDL_DestroyTexture(bg);
 
+    printf("%i\n", score);
     SDL_RenderPresent(game.renderer);
 
     SDL_Delay(16);
@@ -156,7 +158,7 @@ int main(int argc, char** argv) {
 }
 
 
-void game_over(struct Karakter *karakter, struct Game *game) {
+void game_over(Karakter *karakter, Game *game) {
   if (karakter->x < 0) {
         karakter->x = 0; 
     } else if (karakter->x > WINDOW_WIDTH - 100) { 
@@ -171,7 +173,7 @@ void game_over(struct Karakter *karakter, struct Game *game) {
 }
 
 
-void karakter_initialize(struct Karakter *karakter, struct Game *game) {
+void karakter_initialize(Karakter *karakter, Game *game) {
     SDL_Rect rect;
     SDL_Texture *img = IMG_LoadTexture(game->renderer, PESAWAT_PATH);
     SDL_QueryTexture(img, NULL, NULL, &karakter->w, &karakter->h);
@@ -203,7 +205,9 @@ void enemy_spawn(Karakter *musuh, Game *game) {
 }
 
 
-void generate_ammo(struct Karakter *karakter, struct Karakter *peluru, struct Game *game) {
+void generate_ammo(Karakter *karakter, Karakter *peluru, Game *game, Karakter *musuh) {
+    static bool hasHit = false; 
+
     SDL_Rect rect;
     rect.h = peluru->h;
     rect.w = peluru->w;
@@ -214,10 +218,25 @@ void generate_ammo(struct Karakter *karakter, struct Karakter *peluru, struct Ga
     SDL_RenderFillRect(game->renderer, &rect);
 
     peluru->y -= 20;
+
+    if (
+        peluru->x <= musuh->x + musuh->w &&
+        peluru->x + peluru->w >= musuh->x &&
+        peluru->y <= musuh->y + musuh->h &&
+        peluru->y + peluru->h >= musuh->y
+    ) {
+        if (!hasHit) {
+            printf("Hit\n");
+            score++;
+            hasHit = true;
+        }
+    } else {
+        hasHit = false;
+    }
 }
 
 
-void game_cleanup(struct Game *game, int exit_status) {
+void game_cleanup(Game *game, int exit_status) {
     SDL_DestroyRenderer(game->renderer);
     SDL_DestroyWindow(game->window);
     Mix_FreeChunk(ammo_sound_effect);
@@ -225,7 +244,7 @@ void game_cleanup(struct Game *game, int exit_status) {
     exit(exit_status);
 }
 
-bool sdl_initialize(struct Game *game) {
+bool sdl_initialize(Game *game) {
     if (SDL_Init(SDL_INIT_EVERYTHING)) {
         fprintf(stderr, "Error initializing SDL: '%s'\n", SDL_GetError());
         return true;
@@ -255,7 +274,7 @@ bool sdl_initialize(struct Game *game) {
     return false;
 }
 
-void icon_initialize(struct Game *game) {
+void icon_initialize(Game *game) {
     SDL_Surface *icon = IMG_Load(PESAWAT_PATH);
     SDL_SetWindowIcon(game->window, icon);
 }
