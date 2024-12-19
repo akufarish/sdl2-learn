@@ -13,6 +13,7 @@
 #define PESAWAT_PATH "res/img/pesawat.png"
 #define BACKGROUND_IMG "res/img/bg.png"
 #define AMMO_SOUND_EFFECT_PATH "res/audio/blaster.wav"
+#define MAX_ENEMIES 10
 
 typedef struct Game
 {
@@ -30,11 +31,16 @@ typedef struct Karakter
     int velocity_y;
 } Karakter;
 
+Karakter enemies[MAX_ENEMIES];
+
+
 bool isAmmoActive = false;
 int ammoLifeTime = 5000;
 Uint16 score = 0;
 Uint32 ammoSpawnTime = 0;
 Mix_Chunk *ammo_sound_effect = NULL;
+int enemy_count = 0;
+Uint32 last_spawn_time = 0; 
 
 bool sdl_initialize(Game *game);
 void karakter_initialize(Karakter *karakter, Game *game);
@@ -44,7 +50,8 @@ void game_over(Karakter *karakter, Game *game);
 void icon_initialize( Game *game);
 void load_sound_effect();
 void enemy_spawn(Karakter *musuh, Game *game);
-
+void spawn_enemy(Game *game);
+void update_enemies(Game *game, Karakter *musuh);
 
 int main(int argc, char** argv) {
 
@@ -144,7 +151,15 @@ int main(int argc, char** argv) {
         generate_ammo(&karakter, &peluru, &game, &musuh);
     }
 
-    enemy_spawn(&musuh, &game);
+    // enemy_spawn(&musuh, &game);
+
+    Uint32 current_time = SDL_GetTicks();
+    if (current_time > last_spawn_time + 1000) { // Spawn every 1 second
+        spawn_enemy(&game);
+        last_spawn_time = current_time;
+    }
+
+    update_enemies(&game, &musuh);
     game_over(&karakter, &game);
     SDL_DestroyTexture(bg);
 
@@ -192,7 +207,7 @@ void enemy_spawn(Karakter *musuh, Game *game) {
 
     rect.h = musuh->h - 100;
     rect.w = musuh->w - 100;
-    rect.x = musuh->x;
+    rect.x = rand() % WINDOW_WIDTH;
     rect.y = musuh->y;
     double angle = 0.0;
     SDL_RenderCopyEx(game->renderer, img, NULL, &rect, angle, NULL, SDL_FLIP_VERTICAL);
@@ -284,5 +299,38 @@ void load_sound_effect() {
 
     if (ammo_sound_effect == NULL) {
         printf("Failed to load sound effect %s", Mix_GetError());
+    }
+}
+
+void spawn_enemy(Game *game) {
+    if (enemy_count >= MAX_ENEMIES) return;
+
+    enemies[enemy_count] = (Karakter){
+        .h = 100,
+        .w = 100,
+        .x = rand() % WINDOW_WIDTH,
+        .y = -50,                  
+        .velocity_x = 0,
+        .velocity_y = 5            
+    };
+    enemy_count++;
+}
+
+void update_enemies(Game *game, Karakter *musuh) {
+    SDL_Rect rect;
+    SDL_Texture *img = IMG_LoadTexture(game->renderer, PESAWAT_PATH);
+    SDL_QueryTexture(img, NULL, NULL, &musuh->w, &musuh->h);
+
+    for (int i = 0; i < enemy_count; i++) {
+        enemies[i].y += enemies[i].velocity_y;
+
+        if (enemies[i].y < WINDOW_HEIGHT) {
+            SDL_Rect rect = {enemies[i].x, enemies[i].y, enemies[i].w, enemies[i].h};
+            SDL_RenderCopyEx(game->renderer, img, NULL, &rect, 0.0, NULL, SDL_FLIP_VERTICAL);
+        } else {
+            enemies[i] = enemies[enemy_count - 1];
+            enemy_count--;
+            i--; 
+        }
     }
 }
