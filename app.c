@@ -33,6 +33,7 @@ bool sdl_initialize(struct Game *game);
 void karakter_initialize(struct Karakter *karakter, struct Game *game);
 void generateAmmo(struct Karakter *karakter, struct Karakter *peluru, struct Game *game);
 void game_cleanup(struct Game *game, int exit_status);
+void gameOver(struct Karakter *karakter, struct Game *game);
 
 int main(int argc, char** argv) {
 
@@ -112,7 +113,6 @@ int main(int argc, char** argv) {
 
     SDL_RenderPresent(game.renderer);
 }
-
     game_cleanup(&game, EXIT_SUCCESS);
     return 0;
 }
